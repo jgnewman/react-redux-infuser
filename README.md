@@ -12,7 +12,7 @@ import { updateOther } from './other-actions';
 
 class AppContainer extends Component {
   render() {
-    console.log(this.props); // { foo: 'foo', updateState: updateState }
+    console.log(this.props); // { foo: 'foo', updateState: updateState, updateOther: updateOther }
     return <div>Hello, world!</div>
   }
 }
@@ -134,10 +134,8 @@ export default infuse(AppContainer, {
 
   binders: {
     evtHandlers: evtHandlers // <- Turn the function collection into a component
-                             //    prop where each function has been bound to
+  }                          //    prop where each function has been bound to
                              //    the component.
-  }
-
 })
 ```
 
