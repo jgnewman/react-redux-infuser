@@ -55,6 +55,78 @@ import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 
 /**
+ * @class Binders
+ *
+ * Ok, this is the craziest part. Here's what's going on:
+ *
+ * PURPOSE: In order to bind functions to an instance, we need that instance to
+ * be available. Therefore, we can't just modify props before instantiation because
+ * they are generated before instantiation. Instead, we need a way to allow
+ * props to be immutable but still bind prop functions to the instance after
+ * instantiation.
+ */
+class Binders {
+
+  /*
+   * The `binders` property of our `propsFor` object consists of many sub-objects.
+   * Each of these sub-objects is full of functions that should be bound to the
+   * container.
+   *
+   * This function will instead attach prop functions that stand in as proxies.
+   * Each proxy, when called, will check to see if the necessary bound function
+   * exists. If so, it'll call it. If not, it'll make it, then call it.
+   */
+  constructor(binders) {
+
+    /*
+     * This tracks the value the functions will bind to, I.E. the class instance.
+     * That instance doesn't exist  at the moment the constructor runs so it has to be
+     * null for now and we'll attach a value to it after we have the instance.
+     */
+    this.__bindTo__ = null;
+
+    /*
+     * Loop over each sub-object and create a corresponding sub-object for it
+     * on `this`.
+     */
+    Object.keys(binders).forEach(binderPackName => {
+      const binderPack = binders[binderPackName];
+      const destBinderPack = this[binderPackName] = {};
+
+      /*
+       * Loop over each function. We intend to turn it into a function bound
+       * to the container instance. To do that, we'll create a closure var
+       * that will hold a reference to the bound function once it exists.
+       * We then actually create a function that checks to see if this reference
+       * exists and creates it if not. Then it calls it.
+       *
+       * To create the bound function, we expect that we have already set a
+       * value for `this.__bindTo__` which we can only get once we the instance exists.
+       */
+      Object.keys(binderPack).forEach(fnName => {
+        let boundFn = null;
+
+        destBinderPack[fnName] = (...args) => {
+          if (!boundFn) {
+            boundFn = binderPack[fnName].bind(this.__bindTo__);
+          }
+          return boundFn(...args);
+        };
+      });
+    });
+  }
+
+  /*
+   * This function attaches a value to `this.__bindTo__` so that when our
+   * prop functions attempt to create necessary bound functions, they'll
+   * have a value to bind to.
+   */
+  use(bindTo) {
+    this.__bindTo__ = bindTo;
+  }
+}
+
+/**
  * Returns a new, connected component with actions, state values, and
  * bound functions in place.
  *
@@ -133,78 +205,6 @@ function infuse(Container, propsFor) {
     return Object.assign({}, actionCreators, modules);
   }
 
-  /**
-   * @class Binders
-   *
-   * Ok, this is the craziest part. Here's what's going on:
-   *
-   * PURPOSE: In order to bind functions to an instance, we need that instance to
-   * be available. Therefore, we can't just modify props before instantiation because
-   * they are generated before instantiation. Instead, we need a way to allow
-   * props to be immutable but still bind prop functions to the instance after
-   * instantiation.
-   */
-  class Binders {
-
-    /*
-     * The `binders` property of our `propsFor` object consists of many sub-objects.
-     * Each of these sub-objects is full of functions that should be bound to the
-     * container.
-     *
-     * This function will instead attach prop functions that stand in as proxies.
-     * Each proxy, when called, will check to see if the necessary bound function
-     * exists. If so, it'll call it. If not, it'll make it, then call it.
-     */
-    constructor() {
-
-      /*
-       * This tracks the value the functions will bind to, I.E. the class instance.
-       * That instance doesn't exist  at the moment the constructor runs so it has to be
-       * null for now and we'll attach a value to it after we have the instance.
-       */
-      this.__bindTo__ = null;
-
-      /*
-       * Loop over each sub-object and create a corresponding sub-object for it
-       * on `this`.
-       */
-      Object.keys(binders).forEach(binderPackName => {
-        const binderPack = binders[binderPackName];
-        const destBinderPack = this[binderPackName] = {};
-
-        /*
-         * Loop over each function. We intend to turn it into a function bound
-         * to the container instance. To do that, we'll create a closure var
-         * that will hold a reference to the bound function once it exists.
-         * We then actually create a function that checks to see if this reference
-         * exists and creates it if not. Then it calls it.
-         *
-         * To create the bound function, we expect that we have already set a
-         * value for `this.__bindTo__` which we can only get once we the instance exists.
-         */
-        Object.keys(binderPack).forEach(fnName => {
-          let boundFn = null;
-
-          destBinderPack[fnName] = (...args) => {
-            if (!boundFn) {
-              boundFn = binderPack[fnName].bind(this.__bindTo__);
-            }
-            return boundFn(...args);
-          };
-        });
-      });
-    }
-
-    /*
-     * This function attaches a value to `this.__bindTo__` so that when our
-     * prop functions attempt to create necessary bound functions, they'll
-     * have a value to bind to.
-     */
-    use(bindTo) {
-      this.__bindTo__ = bindTo;
-    }
-  }
-
   /*
    * In order for everything to work properly, we need a reference to a container instance.
    * In order to get that reference, we need to return a proxy class. That proxy class gets
@@ -237,7 +237,7 @@ function infuse(Container, propsFor) {
       if (binderCache) {
         newBinders = binderCache;
       } else {
-        newBinders = binderCache = new Binders();
+        newBinders = binderCache = new Binders(binders);
       }
 
       /*
@@ -269,5 +269,7 @@ function infuse(Container, propsFor) {
   });
 
 }
+
+infuse.Binders = Binders;
 
 module.exports = exports = infuse;
