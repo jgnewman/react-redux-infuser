@@ -1,6 +1,6 @@
 {
   "name": "react-redux-infuser",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A thin layer wrapping react-redux tools to simplify creating more powerful React containers",
   "main": "bin/index.js",
   "repository": {
