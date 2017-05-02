@@ -272,15 +272,10 @@ function infuse(Container, propsFor) {
       value: function render() {
 
         /*
-         * Create a clonable instance of the container.
-         */
-        var container = _react2.default.createElement(Container, null);
-        var newBinders = void 0;
-
-        /*
          * Either generate our binder functions or pull them from the
          * cache so we don't have to remake them on every render call.
          */
+        var newBinders = void 0;
         if (binderCache) {
           newBinders = binderCache;
         } else {
@@ -298,20 +293,20 @@ function infuse(Container, propsFor) {
         });
 
         /*
-         * Clone the container and pass down our props to it, including our binder functions as
+         * Instantiate the container and pass down our props to it, including our binder functions as
          * well as children in case any exist.
          *
-         * Now that the clone exists, pass it into the `use` method on the `Binders` class so that
-         * when each binder proxy function creates the actual bound function upon its first time being
+         * Now that the element exists, pass it into the `use` method on the `Binders` class so that
+         * when each binder proxy creates the actual bound function upon its first time being
          * called, we'll have the value to bind to.
          */
-        var clone = _react2.default.cloneElement(container, newProps, this.props.children);
-        newBinders.use(clone);
+        var container = _react2.default.createElement(Container, newProps, this.props.children);
+        newBinders.use(container);
 
         /*
          * Return the cloned element.
          */
-        return clone;
+        return container;
       }
     }]);
 
