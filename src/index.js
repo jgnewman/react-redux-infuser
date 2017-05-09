@@ -91,7 +91,7 @@ class Binders {
      */
     Object.keys(binders).forEach(binderPackName => {
       const binderPack = binders[binderPackName];
-      const destBinderPack = this[binderPackName] = {};
+      const isFunction = typeof binderPack === 'function';
 
       /*
        * Loop over each function. We intend to turn it into a function bound
@@ -103,16 +103,36 @@ class Binders {
        * To create the bound function, we expect that we have already set a
        * value for `this.__bindTo__` which we can only get once we the instance exists.
        */
-      Object.keys(binderPack).forEach(fnName => {
+      if (!isFunction) {
+        const destBinderPack = this[binderPackName] = {};
+
+        Object.keys(binderPack).forEach(fnName => {
+          let boundFn = null;
+
+          destBinderPack[fnName] = (...args) => {
+            if (!boundFn) {
+              boundFn = binderPack[fnName].bind(this.__bindTo__);
+            }
+            return boundFn(...args);
+          };
+        });
+
+      /*
+       * For a single function instead of an object of functions,
+       * just create a single binder.
+       */
+      } else {
         let boundFn = null;
 
-        destBinderPack[fnName] = (...args) => {
+        this[binderPackName] = (...args) => {
           if (!boundFn) {
-            boundFn = binderPack[fnName].bind(this.__bindTo__);
+            boundFn = binderPack.bind(this.__bindTo__);
           }
           return boundFn(...args);
-        };
-      });
+        }
+      }
+
+
     });
   }
 
@@ -185,15 +205,27 @@ function infuse(Container, propsFor) {
      */
     Object.keys(actions).forEach(actionPackName => {
       const actionPack = actions[actionPackName];
-      const destActionPack = actionCreators[actionPackName] = {};
+      const isFunction = typeof actionPack === 'function';
 
-      /*
-       * For each function, turn it into a function that triggers an action
-       * and store it in its destination location.
-       */
-      Object.keys(actionPack).forEach(fnName => {
-        destActionPack[fnName] = bindActionCreators(actionPack[fnName], dispatch);
-      });
+      if (!isFunction) {
+        const destActionPack = actionCreators[actionPackName] = {};
+
+        /*
+         * For each function, turn it into a function that triggers an action
+         * and store it in its destination location.
+         */
+        Object.keys(actionPack).forEach(fnName => {
+          destActionPack[fnName] = bindActionCreators(actionPack[fnName], dispatch);
+        });
+
+      } else {
+
+        /*
+         * For functions, just bind the single function.
+         */
+        actionCreators[actionPackName] = bindActionCreators(actionPack, dispatch);
+      }
+
     });
 
     /*

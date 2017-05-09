@@ -6,7 +6,8 @@ const initialState = {
   },
   app: {
     foo: 'foofoofoo',
-    bar: 'barbarbar'
+    bar: 'barbarbar',
+    bazzer: 1
   }
 };
 
@@ -24,7 +25,9 @@ function appReducer(state = initialState.app, action) {
     case 'UPDATE_FOO':
       return Object.assign({}, state, { foo: action.payload });
     case 'UPDATE_BAR':
-      return Object.assign({}, state, { bar: action.payload })
+      return Object.assign({}, state, { bar: action.payload });
+    case 'BAZZER':
+      return Object.assign({}, state, { bazzer: state.bazzer + 1 });
     default:
       return state;
   }

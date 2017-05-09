@@ -1,12 +1,20 @@
 {
   "name": "react-redux-infuser",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A thin layer wrapping react-redux tools to simplify creating more powerful React containers",
   "main": "bin/index.js",
   "repository": {
     "url": "git@github.com:jgnewman/react-redux-infuser",
     "type": "git"
   },
+  "keywords": [
+    "react",
+    "redux",
+    "props",
+    "infuse",
+    "connect",
+    "add props"
+  ],
   "author": "John Newman <rescuecreative@gmail.com>",
   "license": "MIT",
   "devDependencies": {

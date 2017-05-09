@@ -133,7 +133,7 @@ var Binders = function () {
      */
     Object.keys(binders).forEach(function (binderPackName) {
       var binderPack = binders[binderPackName];
-      var destBinderPack = _this[binderPackName] = {};
+      var isFunction = typeof binderPack === 'function';
 
       /*
        * Loop over each function. We intend to turn it into a function bound
@@ -145,16 +145,34 @@ var Binders = function () {
        * To create the bound function, we expect that we have already set a
        * value for `this.__bindTo__` which we can only get once we the instance exists.
        */
-      Object.keys(binderPack).forEach(function (fnName) {
+      if (!isFunction) {
+        var destBinderPack = _this[binderPackName] = {};
+
+        Object.keys(binderPack).forEach(function (fnName) {
+          var boundFn = null;
+
+          destBinderPack[fnName] = function () {
+            if (!boundFn) {
+              boundFn = binderPack[fnName].bind(_this.__bindTo__);
+            }
+            return boundFn.apply(undefined, arguments);
+          };
+        });
+
+        /*
+         * For a single function instead of an object of functions,
+         * just create a single binder.
+         */
+      } else {
         var boundFn = null;
 
-        destBinderPack[fnName] = function () {
+        _this[binderPackName] = function () {
           if (!boundFn) {
-            boundFn = binderPack[fnName].bind(_this.__bindTo__);
+            boundFn = binderPack.bind(_this.__bindTo__);
           }
           return boundFn.apply(undefined, arguments);
         };
-      });
+      }
     });
   }
 
@@ -236,15 +254,25 @@ function infuse(Container, propsFor) {
      */
     Object.keys(actions).forEach(function (actionPackName) {
       var actionPack = actions[actionPackName];
-      var destActionPack = actionCreators[actionPackName] = {};
+      var isFunction = typeof actionPack === 'function';
 
-      /*
-       * For each function, turn it into a function that triggers an action
-       * and store it in its destination location.
-       */
-      Object.keys(actionPack).forEach(function (fnName) {
-        destActionPack[fnName] = (0, _redux.bindActionCreators)(actionPack[fnName], dispatch);
-      });
+      if (!isFunction) {
+        var destActionPack = actionCreators[actionPackName] = {};
+
+        /*
+         * For each function, turn it into a function that triggers an action
+         * and store it in its destination location.
+         */
+        Object.keys(actionPack).forEach(function (fnName) {
+          destActionPack[fnName] = (0, _redux.bindActionCreators)(actionPack[fnName], dispatch);
+        });
+      } else {
+
+        /*
+         * For functions, just bind the single function.
+         */
+        actionCreators[actionPackName] = (0, _redux.bindActionCreators)(actionPack, dispatch);
+      }
     });
 
     /*
@@ -486,6 +514,7 @@ var AppContainer = function (_Component2) {
       var _props = this.props,
           appActions = _props.appActions,
           miscActions = _props.miscActions,
+          updateBazzer = _props.updateBazzer,
           appHandlers = _props.appHandlers,
           helpers = _props.helpers;
 
@@ -495,12 +524,15 @@ var AppContainer = function (_Component2) {
         appActions.updateFoo('foo was updated');
         appActions.updateBar('bar was updated');
         miscActions.updateName('name was updated');
+        updateBazzer();
       }, 3000);
     }
   }, {
     key: 'render',
     value: function render() {
-      var appHandlers = this.props.appHandlers;
+      var _props2 = this.props,
+          appHandlers = _props2.appHandlers,
+          handleNothing = _props2.handleNothing;
 
 
       return _react2.default.createElement(
@@ -529,6 +561,18 @@ var AppContainer = function (_Component2) {
           'App bar: ',
           this.props.bar
         ),
+        _react2.default.createElement(
+          'div',
+          null,
+          'App bazzer: ',
+          this.props.bazzer
+        ),
+        _react2.default.createElement(
+          'a',
+          { onClick: handleNothing },
+          'Click me too'
+        ),
+        _react2.default.createElement('br', null),
         _react2.default.createElement(App, {
           appActions: this.props.appActions,
           miscActions: this.props.miscActions,
@@ -546,11 +590,17 @@ var Infused = (0, _index2.default)(AppContainer, {
 
   actions: {
     appActions: appActions,
-    miscActions: miscActions
+    miscActions: miscActions,
+    updateBazzer: function updateBazzer() {
+      return { type: 'BAZZER' };
+    }
   },
 
   binders: {
-    appHandlers: appHandlers
+    appHandlers: appHandlers,
+    handleNothing: function handleNothing() {
+      console.log('my props are', this.props);
+    }
   },
 
   modules: {
@@ -561,7 +611,8 @@ var Infused = (0, _index2.default)(AppContainer, {
     return {
       name: state.misc.name,
       foo: state.app.foo,
-      bar: state.app.bar
+      bar: state.app.bar,
+      bazzer: state.app.bazzer
     };
   }
 
@@ -602,7 +653,8 @@ var initialState = {
   },
   app: {
     foo: 'foofoofoo',
-    bar: 'barbarbar'
+    bar: 'barbarbar',
+    bazzer: 1
   }
 };
 
@@ -627,6 +679,8 @@ function appReducer() {
       return Object.assign({}, state, { foo: action.payload });
     case 'UPDATE_BAR':
       return Object.assign({}, state, { bar: action.payload });
+    case 'BAZZER':
+      return Object.assign({}, state, { bazzer: state.bazzer + 1 });
     default:
       return state;
   }

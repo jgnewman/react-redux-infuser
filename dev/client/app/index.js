@@ -29,18 +29,19 @@ class AppContainer extends Component {
   }
 
   componentDidMount() {
-    const { appActions, miscActions, appHandlers, helpers } = this.props;
+    const { appActions, miscActions, updateBazzer, appHandlers, helpers } = this.props;
 
     setTimeout(() => {
       helpers.logStuff()
       appActions.updateFoo('foo was updated')
       appActions.updateBar('bar was updated')
       miscActions.updateName('name was updated')
+      updateBazzer()
     }, 3000)
   }
 
   render() {
-    const { appHandlers } = this.props;
+    const { appHandlers, handleNothing } = this.props;
 
     return (
       <div>
@@ -48,6 +49,8 @@ class AppContainer extends Component {
         <div>Misc name: {this.props.name}</div>
         <div>App foo: {this.props.foo}</div>
         <div>App bar: {this.props.bar}</div>
+        <div>App bazzer: {this.props.bazzer}</div>
+        <a onClick={handleNothing}>Click me too</a><br/>
         <App
           appActions={this.props.appActions}
           miscActions={this.props.miscActions}
@@ -63,11 +66,13 @@ const Infused = infuse(AppContainer, {
 
   actions: {
     appActions: appActions,
-    miscActions: miscActions
+    miscActions: miscActions,
+    updateBazzer: function () { return { type: 'BAZZER' } }
   },
 
   binders: {
-    appHandlers: appHandlers
+    appHandlers: appHandlers,
+    handleNothing: function () { console.log('my props are', this.props) }
   },
 
   modules: {
@@ -77,7 +82,8 @@ const Infused = infuse(AppContainer, {
   values: state => ({
     name: state.misc.name,
     foo: state.app.foo,
-    bar: state.app.bar
+    bar: state.app.bar,
+    bazzer: state.app.bazzer
   })
 
 })
